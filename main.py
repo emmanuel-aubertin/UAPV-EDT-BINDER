@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
 import time
 
 app = Flask(__name__)
@@ -13,7 +14,14 @@ def login():
         username = credentials.get('username')
         password = credentials.get('password')
         
-        driver = webdriver.Chrome()
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")  # Ensure GUI is off
+        chrome_options.add_argument("--no-sandbox")  # Bypass OS security model
+        chrome_options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
+
+        # Instantiate a webdriver with the options
+        driver = webdriver.Chrome(options=chrome_options)
+        
         driver.get("https://cas.univ-avignon.fr/cas/login?service=https%3A%2F%2Fedt.univ-avignon.fr%2Flogin")
         
         driver.find_element(by=By.ID, value="username").send_keys(username)
