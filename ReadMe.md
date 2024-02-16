@@ -1,9 +1,14 @@
+# Get your edt-uapv token
 
+## Dependencies
 
 Install python dependecies
 ```bash
 pip install -r requirements.txt
 ```
+You need to install chromedriver
+
+## Curl Example :
 
 ```bash
 curl -X 'POST' \
@@ -14,4 +19,13 @@ curl -X 'POST' \
   "username": "uapvXXXXXXX",
   "password": "YOUR_PASSWORD"
 }'
+```
+
+Ouptut :
+
+```json
+{
+    "name": "Aubertin Emmanuel",
+    "token": "MY_TOKEN_HERE"
+}
 ```

@@ -16,12 +16,9 @@ def login():
         driver = webdriver.Chrome()
         driver.get("https://cas.univ-avignon.fr/cas/login?service=https%3A%2F%2Fedt.univ-avignon.fr%2Flogin")
         
-        input_username = driver.find_element(by=By.ID, value="username")
+        driver.find_element(by=By.ID, value="username").send_keys(username)
         input_password = driver.find_element(by=By.ID, value="password")
-        
-        input_username.send_keys(username)
         input_password.send_keys(password)
-        
         input_password.send_keys(Keys.RETURN)
         
         if(driver.title != "Edt"):
