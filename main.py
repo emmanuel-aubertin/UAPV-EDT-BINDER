@@ -35,14 +35,23 @@ def login():
         time.sleep(3)
         name = driver.execute_script("return window.sessionStorage.getItem('name');")
         token = driver.execute_script("return window.sessionStorage.getItem('token');")
-        
+
+        uid = driver.execute_script("return window.sessionStorage.getItem('uid');")
+        """ Taken from edt main.js
+        isStudent()
+        {
+            var e = window.sessionStorage.getItem("uid");
+            return !(e && "uapv" != e.substring(0, 4) || null == e)
+        }
+        """
+        is_student = not (uid == None or not uid.startswith("uapv"))
         driver.quit()
 
         # Check if the name was successfully retrieved
         if not name or not token:
             return jsonify(error="Could not retrieve name from session storage"), 500
         
-        return jsonify({"name": name, "token": token})
+        return jsonify({"name": name, "token": token, "is_student": is_student})
     else:
         return jsonify(error="Request must be JSON"), 400
 
