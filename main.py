@@ -170,11 +170,29 @@ def create_event():
         return jsonify({"error": "Teacher not avaible"})
 
     classroom_code = input_data.get('classroom_code')
+    type = input_data.get('type')
+    memo = input_data.get('memo')
     
     if classroom_code != "" and not is_classroom_avaible(token, start, end, classroom_code):
         return jsonify({"error": "Classroom not avaible"})
     
-    return jsonify({"message": "🚧 Route under construction 🚧"})
+    event_code = os.urandom(4).hex()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('''INSERT INTO event (code, start, end, type, memo, teacher_code, classroom_code)
+                          VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                       (event_code, start, end, type, memo, teacher_code, classroom_code))
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({"error": f"Failed to insert event into database: {e}"}), 500
+
+    conn.close()
+    return jsonify({"message": "Event created successfully", "event_code": event_code}), 201
     
 if __name__ == '__main__':
     init_db()
