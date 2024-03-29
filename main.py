@@ -13,6 +13,7 @@ app = Flask(__name__)
 DATABASE_NAME = 'custom_edt.db'
 API_BASE_URL = "https://edt-api.univ-avignon.fr/api/"
 
+# https://edt-api.univ-avignon.fr/api/events_promotion/2-L3IN
 def init_db():
     """Create the database and tables if they don't already exist."""
     if not os.path.exists(DATABASE_NAME):
@@ -25,8 +26,10 @@ def init_db():
                           end TEXT,
                           type TEXT,
                           memo TEXT,
+                          title TEXT,
                           teacher_code TEXT,
-                          classroom_code TEXT
+                          classroom_code TEXT,
+                          promo_code TEXT
                           )''')
         conn.commit()
         conn.close()
@@ -38,6 +41,34 @@ def get_db_connection():
     conn = sqlite3.connect(DATABASE_NAME)
     conn.row_factory = sqlite3.Row
     return conn
+
+def is_promo_avaible(token, start, end, promo_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT start, end FROM event WHERE promo_code = ?", (promo_code,))
+    events = cursor.fetchall()
+    conn.close()
+    
+    if not is_avaible(events, start, end):
+        return False
+    
+    url = API_BASE_URL + f"events_promotion/{promo_code}"
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://edt.univ-avignon.fr/",
+        "token": token,
+        "Origin": "https://edt.univ-avignon.fr",
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        return False
+    
+    data = response.json()["results"]
+    
+    return is_avaible(data, start, end)
 
 def is_classroom_avaible(token, start, end, classroom_code):
     conn = get_db_connection()
@@ -64,9 +95,8 @@ def is_classroom_avaible(token, start, end, classroom_code):
         return False
     
     data = response.json()["results"]
-    print("Checking web info")
+    
     return is_avaible(data, start, end)
-    return True
 
 def is_teacher_avaible(token, start, end, teacher_code):
     conn = get_db_connection()
@@ -164,27 +194,34 @@ def create_event():
     token = input_data.get('token')
     start = input_data.get('start')
     end = input_data.get('end')
-    teacher_code = input_data.get('teache_code')
+    teacher_code = input_data.get('teacher_code')
     
     if teacher_code != "" and not is_teacher_avaible(token, start, end, teacher_code):
         return jsonify({"error": "Teacher not avaible"})
 
     classroom_code = input_data.get('classroom_code')
-    type = input_data.get('type')
-    memo = input_data.get('memo')
+
     
     if classroom_code != "" and not is_classroom_avaible(token, start, end, classroom_code):
         return jsonify({"error": "Classroom not avaible"})
     
+    promo_code = input_data.get('promo_code')
+    
+    if promo_code != "" and not is_promo_avaible(token, start, end, promo_code):
+        return jsonify({"error": "Classroom not avaible"})
+    
+    type = input_data.get('type')
+    memo = input_data.get('memo')
+    title = input_data.get('title')
     event_code = os.urandom(4).hex()
 
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        cursor.execute('''INSERT INTO event (code, start, end, type, memo, teacher_code, classroom_code)
-                          VALUES (?, ?, ?, ?, ?, ?, ?)''',
-                       (event_code, start, end, type, memo, teacher_code, classroom_code))
+        cursor.execute('''INSERT INTO event (code, start, end, type, memo, title, teacher_code, classroom_code, promo_code)
+                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                       (event_code, start, end, type, memo, title, teacher_code, classroom_code, promo_code))
         conn.commit()
     except sqlite3.Error as e:
         conn.rollback()
@@ -193,7 +230,7 @@ def create_event():
 
     conn.close()
     return jsonify({"message": "Event created successfully", "event_code": event_code}), 201
-    
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)

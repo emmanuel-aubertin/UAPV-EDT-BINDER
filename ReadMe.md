@@ -53,7 +53,8 @@ Upon successful authentication, the server will respond with a JSON object conta
 ```json
 {
     "name": "Aubertin Emmanuel",
-    "token": "MY_TOKEN_HERE"
+    "token": "MY_TOKEN_HERE",
+    "isStudent": "true",
 }
 ```
 
