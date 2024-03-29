@@ -4,8 +4,62 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 import time
+import sqlite3
+import os
+import requests
+from dateutil import parser
 
 app = Flask(__name__)
+DATABASE_NAME = 'custom_edt.db'
+API_BASE_URL = "https://edt-api.univ-avignon.fr/api/"
+def init_db():
+    """Create the database and tables if they don't already exist."""
+    if not os.path.exists(DATABASE_NAME):
+        conn = sqlite3.connect(DATABASE_NAME)
+        cursor = conn.cursor()
+        # Create the 'event' table
+        cursor.execute('''CREATE TABLE event (
+                          code TEXT PRIMARY KEY,
+                          start TEXT,
+                          end TEXT,
+                          type TEXT,
+                          memo TEXT,
+                          teacher_code TEXT,
+                          classroom_code TEXT
+                          )''')
+        conn.commit()
+        conn.close()
+        print("Database and table created.")
+    else:
+        print("Database already exists.")
+
+def is_teacher_avaible(token, start, end, teacher_code):
+    url = API_BASE_URL + f"events_enseignant/{teacher_code}"
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://edt.univ-avignon.fr/",
+        "token": token,
+        "Origin": "https://edt.univ-avignon.fr",
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        return False
+    
+    data = response.json()["results"]
+    return is_avaible(data, start, end)
+
+def is_avaible(events, start, end):
+    for event in events:
+        if(is_overlapping(event, start, end)):
+            return False
+    return True
+
+def is_overlapping(event, start, end):
+    return parser.parse(start) < parser.parse(event["end"]) and parser.parse(end) > parser.parse(event["start"])
+
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -55,5 +109,8 @@ def login():
     else:
         return jsonify(error="Request must be JSON"), 400
 
+
+
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True)
