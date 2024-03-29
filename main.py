@@ -98,16 +98,7 @@ def is_classroom_avaible(token, start, end, classroom_code):
     
     return is_avaible(data, start, end)
 
-def is_teacher_avaible(token, start, end, teacher_code):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT start, end FROM event WHERE teacher_code = ?", (teacher_code,))
-    events = cursor.fetchall()
-    conn.close()
-    
-    if not is_avaible(events, start, end):
-        return False
-    
+def get_teacher_api_events(token, teacher_code):
     url = API_BASE_URL + f"events_enseignant/{teacher_code}"
     headers = {
         "Accept": "application/json, text/plain, */*",
@@ -121,9 +112,18 @@ def is_teacher_avaible(token, start, end, teacher_code):
     if response.status_code != 200:
         print(f"Error: {response.status_code}")
         return False
+    return response.json()["results"]
+
+def is_teacher_avaible(token, start, end, teacher_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT start, end FROM event WHERE teacher_code = ?", (teacher_code,))
+    events = cursor.fetchall()
+    conn.close()
     
-    data = response.json()["results"]
-    return is_avaible(data, start, end)
+    if not is_avaible(events, start, end):
+        return False
+    return is_avaible(get_teacher_api_events(token, teacher_code), start, end)
 
 def is_avaible(events, start, end):
     if(len(events) == 0):
@@ -184,14 +184,18 @@ def login():
     
     return jsonify({"name": name, "token": token, "is_student": is_student})
         
-
 @app.route('/event/create', methods=['POST'])
 def create_event():
     if not request.is_json:
         return jsonify(error="Request must be JSON"), 400
     
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+    else:
+        return jsonify({"error": "Authorization token is missing or invalid"}), 401
+    
     input_data = request.get_json()
-    token = input_data.get('token')
     start = input_data.get('start')
     end = input_data.get('end')
     teacher_code = input_data.get('teacher_code')
@@ -231,6 +235,27 @@ def create_event():
     conn.close()
     return jsonify({"message": "Event created successfully", "event_code": event_code}), 201
 
+@app.route('/event/get/teacher/<teacher_code>', methods=['GET'])
+def get_events_by_teacher(teacher_code):
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+    else:
+        return jsonify({"error": "Authorization token is missing or invalid"}), 401
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM event WHERE teacher_code = ?", (teacher_code,))
+    db_events_list = cursor.fetchall()
+    conn.close()
+    
+    db_events_dicts = [dict(row) for row in db_events_list]
+    
+    api_events = get_teacher_api_events(token, teacher_code)
+
+    return jsonify({"results": api_events + db_events_dicts})
+
+    
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
