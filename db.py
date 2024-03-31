@@ -185,7 +185,6 @@ def get_teacher_from_code(teacher_code):
 def get_events_with_teacher_code(teacher_code):
     conn = get_db_connection()
     cursor = conn.cursor()
-
     query = '''
         SELECT 
             event.code, 
@@ -223,3 +222,83 @@ def get_events_with_teacher_code(teacher_code):
     ]
 
     return events_with_teachers_and_classrooms
+
+def get_events_with_classrooms_code(classrooms_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = '''
+        SELECT 
+            event.code, 
+            event.start, 
+            event.end, 
+            event.type, 
+            event.memo, 
+            event.title, 
+            event.promo_code,
+            teachers.name AS teacher_name,
+            classrooms.name AS classroom_name,
+            academicPrograms.name AS program_name
+        FROM 
+            event
+        JOIN 
+            teachers ON event.teacher_code = teachers.uapvRH
+        JOIN 
+            classrooms ON event.classroom_code = classrooms.code
+        JOIN 
+            academicPrograms ON event.promo_code = academicPrograms.code  
+        WHERE 
+            event.classroom_code = ?
+    '''
+
+    cursor.execute(query, (classrooms_code,))
+    results = cursor.fetchall()
+    conn.close()
+
+    # Formatting the result
+    events = [
+        {'code': row[0], 'start': row[1], 'end': row[2],
+         'title': f"Matière : {row[5]}\nEnseignant : {row[7]}\nSalle : {row[8]}\nPromotion : {row[9].upper()}\nType : {row[3]}\nMémo : {row[4]}"} 
+        for row in results
+    ]
+
+    return events
+
+def get_events_with_promotion_code(promotion_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = '''
+        SELECT 
+            event.code, 
+            event.start, 
+            event.end, 
+            event.type, 
+            event.memo, 
+            event.title, 
+            event.promo_code,
+            teachers.name AS teacher_name,
+            classrooms.name AS classroom_name,
+            academicPrograms.name AS program_name
+        FROM 
+            event
+        JOIN 
+            teachers ON event.teacher_code = teachers.uapvRH
+        JOIN 
+            classrooms ON event.classroom_code = classrooms.code
+        JOIN 
+            academicPrograms ON event.promo_code = academicPrograms.code  
+        WHERE 
+            event.promo_code = ?
+    '''
+
+    cursor.execute(query, (promotion_code,))
+    results = cursor.fetchall()
+    conn.close()
+
+    # Formatting the result
+    events = [
+        {'code': row[0], 'start': row[1], 'end': row[2],
+         'title': f"Matière : {row[5]}\nEnseignant : {row[7]}\nSalle : {row[8]}\nPromotion : {row[9].upper()}\nType : {row[3]}\nMémo : {row[4]}"} 
+        for row in results
+    ]
+
+    return events

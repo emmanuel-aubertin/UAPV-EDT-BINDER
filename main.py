@@ -87,6 +87,20 @@ def get_teacher_api_events(token, teacher_code):
         return False
     return response.json()["results"]
 
+def get_classroom_api_events(token, classroom_code):
+    url = API_BASE_URL + f"events_salle/{classroom_code}"
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://edt.univ-avignon.fr/",
+        "token": token,
+        "Origin": "https://edt.univ-avignon.fr",
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        return False
+    return response.json()["results"]
+
 def is_teacher_avaible(token, start, end, teacher_code):
     conn = db.get_db_connection()
     cursor = conn.cursor()
@@ -218,7 +232,18 @@ def get_events_by_teacher(teacher_code):
     db_events = db.get_events_with_teacher_code(teacher_code)
     return jsonify({"results":  get_teacher_api_events(token, teacher_code) + db_events})
 
- # TODO: get events by classroom
+@app.route('/event/get/classroom/<classrooms_code>', methods=['GET'])
+def get_events_by_classroom(classrooms_code):
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+    else:
+        return jsonify({"error": "Authorization token is missing or invalid"}), 401
+    
+    db.update_data(token)
+    db_events = db.get_events_with_classrooms_code(classrooms_code)
+    return jsonify({"results":  get_classroom_api_events(token, classrooms_code) + db_events})
+
 if __name__ == '__main__':
     db.init_db()
     app.run(debug=True)
