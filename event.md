@@ -182,7 +182,67 @@ The response is a JSON object containing an array of events associated with the 
 }
 ```
 
-#### Notes
+
+
+---
+
+## Get Events by Promotion
+
+This endpoint provides a comprehensive list of events associated with a specific academic promotion, such as a class or cohort. It's particularly useful for students, faculty, and staff looking to get an overview of scheduled academic and extracurricular activities for a particular group.
+
+### HTTP Request
+
+`GET /event/get/promotion/{PROMOTION_CODE}`
+
+### Headers
+
+- `Authorization: Bearer {YOUR_TOKEN}`
+
+### URL Parameters
+
+| Parameter        | Type   | Description                                  |
+|------------------|--------|----------------------------------------------|
+| `PROMOTION_CODE` | String | Unique identifier for the promotion of interest |
+
+### cURL Example
+
+```bash
+curl --location 'http://127.0.0.1:5000/event/get/promotion/{PROMOTION_CODE}' \
+--header 'Authorization: Bearer {YOUR_TOKEN}'
+```
+
+### Response
+
+The response includes a JSON object containing an array of events related to the specified promotion. Each event in the array provides details about the event's timing, location, nature, and any additional notes.
+
+#### Example Success Response
+
+```json
+{
+    "results": [
+        {
+            "code": "2-L3IN",
+            "end": "2023-09-21T17:00:00+00:00",
+            "favori": "",
+            "memo": null,
+            "start": "2023-09-21T15:30:00+00:00",
+            "title": "Matière : UEO SUAPS  : SPORT SEMESTRE 5\nPromotion : L3 INFORMATIQUE\n",
+            "type": "UEO"
+        },
+        ...
+        {
+            "code": "42000c5c",
+            "end": "2024-11-11T11:30:00+00:00",
+            "memo": "réunion projet",
+            "start": "2024-11-11T11:00:00+00:00",
+            "title": "Matière : Test de résa\nEnseignant : XXXXXXX\nSalle : a016 v ( gt )\nPromotion : L3 INFORMATIQUE\nType : Pro\nMémo : réunion projet",
+            "type": "Pro"
+        }
+    ]
+}
+```
+
+### Notes
 
 - The `code` field may be `null` for some events if they are fetched from external sources or if the event code is not applicable.
 - The response includes various details about each event, potentially including custom memos, type designations (e.g., "TD" for teaching duties, "Pro" for professional events), and identifiers for related entities like classrooms or promotions.

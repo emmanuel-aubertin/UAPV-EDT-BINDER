@@ -53,13 +53,13 @@ Upon successful authentication, the server will respond with a JSON object conta
 ```json
 {
     "name": "Aubertin Emmanuel",
-    "token": "MY_TOKEN_HERE",
+    "token": "YOUR_TOKEN_HERE",
     "isStudent": "true",
 }
 ```
 
-Store this token securely, as it will be used for subsequent API requests to the University of Avignon's systems.
-This can expire shortly, see it like an session token.
+Store this token securely, as it will be used for subsequent API requests to the University of Avignon's schedule systems.
+This can expire shortly, it is like an session token.
 
 ## Note
 
