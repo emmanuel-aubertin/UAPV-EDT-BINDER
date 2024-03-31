@@ -182,10 +182,19 @@ def get_teacher_from_code(teacher_code):
     conn.close()
     return db_events_list[0]
 
-def get_events_with_teacher_code(teacher_code):
+def get_db_events(filter_by, filter_value):
+    """
+    Fetch events from the database based on a filtering criterion.
+
+    :param filter_by: Column name to filter by (e.g., 'teacher_code', 'classroom_code', 'promo_code').
+    :param filter_value: Value to filter the specified column by.
+    :return: A list of dictionaries, each representing an event.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
-    query = '''
+
+    # Dynamically construct the WHERE clause based on the filter criteria
+    query = f'''
         SELECT 
             event.code, 
             event.start, 
@@ -206,99 +215,28 @@ def get_events_with_teacher_code(teacher_code):
         JOIN 
             academicPrograms ON event.promo_code = academicPrograms.code  
         WHERE 
-            event.teacher_code = ?
+            event.{filter_by} = ?
     '''
-    print(query)
-    cursor.execute(query, (teacher_code,))
-    results = cursor.fetchall()
 
+    cursor.execute(query, (filter_value,))
+    results = cursor.fetchall()
     conn.close()
 
     # Formatting the result
-    events_with_teachers_and_classrooms = [
-        {'code': row[0], 'start': row[1], 'end': row[2],
+    events = [
+        {'code': row[0], 'start': row[1], 'end': row[2], 'type': row[3], "memo": row[4],
          'title': f"Matière : {row[5]}\nEnseignant : {row[7]}\nSalle : {row[8]}\nPromotion : {row[9].upper()}\nType : {row[3]}\nMémo : {row[4]}"} 
         for row in results
     ]
 
-    return events_with_teachers_and_classrooms
+    return events
+
+
+def get_events_with_teacher_code(teacher_code):
+    return get_db_events('teacher_code', teacher_code)
 
 def get_events_with_classrooms_code(classrooms_code):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    query = '''
-        SELECT 
-            event.code, 
-            event.start, 
-            event.end, 
-            event.type, 
-            event.memo, 
-            event.title, 
-            event.promo_code,
-            teachers.name AS teacher_name,
-            classrooms.name AS classroom_name,
-            academicPrograms.name AS program_name
-        FROM 
-            event
-        JOIN 
-            teachers ON event.teacher_code = teachers.uapvRH
-        JOIN 
-            classrooms ON event.classroom_code = classrooms.code
-        JOIN 
-            academicPrograms ON event.promo_code = academicPrograms.code  
-        WHERE 
-            event.classroom_code = ?
-    '''
-
-    cursor.execute(query, (classrooms_code,))
-    results = cursor.fetchall()
-    conn.close()
-
-    # Formatting the result
-    events = [
-        {'code': row[0], 'start': row[1], 'end': row[2],
-         'title': f"Matière : {row[5]}\nEnseignant : {row[7]}\nSalle : {row[8]}\nPromotion : {row[9].upper()}\nType : {row[3]}\nMémo : {row[4]}"} 
-        for row in results
-    ]
-
-    return events
+    return get_db_events('classroom_code', classrooms_code)
 
 def get_events_with_promotion_code(promotion_code):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    query = '''
-        SELECT 
-            event.code, 
-            event.start, 
-            event.end, 
-            event.type, 
-            event.memo, 
-            event.title, 
-            event.promo_code,
-            teachers.name AS teacher_name,
-            classrooms.name AS classroom_name,
-            academicPrograms.name AS program_name
-        FROM 
-            event
-        JOIN 
-            teachers ON event.teacher_code = teachers.uapvRH
-        JOIN 
-            classrooms ON event.classroom_code = classrooms.code
-        JOIN 
-            academicPrograms ON event.promo_code = academicPrograms.code  
-        WHERE 
-            event.promo_code = ?
-    '''
-
-    cursor.execute(query, (promotion_code,))
-    results = cursor.fetchall()
-    conn.close()
-
-    # Formatting the result
-    events = [
-        {'code': row[0], 'start': row[1], 'end': row[2],
-         'title': f"Matière : {row[5]}\nEnseignant : {row[7]}\nSalle : {row[8]}\nPromotion : {row[9].upper()}\nType : {row[3]}\nMémo : {row[4]}"} 
-        for row in results
-    ]
-
-    return events
+    return get_db_events('promo_code', promotion_code)

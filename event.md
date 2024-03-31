@@ -113,14 +113,69 @@ The response will include an array of events associated with the specified teach
         },
         ...
         {
-            "classroom_code": "AGR_A016",
-            "code": "de8583b7",
-            "end": "2023-11-11T11:30:00+00:00",
+            "code": "42000c5c",
+            "end": "2024-11-11T11:30:00+00:00",
             "memo": "réunion projet",
-            "promo_code": "2-L3IN",
-            "start": "2023-11-11T11:00:00+00:00",
-            "teacher_code": "9882",
-            "title": "Test de résa",
+            "start": "2024-11-11T11:00:00+00:00",
+            "title": "Matière : Test de résa\nEnseignant : XXXXXXX\nSalle : a016 v ( gt )\nPromotion : L3 INFORMATIQUE\nType : Pro\nMémo : réunion projet",
+            "type": "Pro"
+        }
+    ]
+}
+```
+
+---
+
+## Get Events by Classroom
+
+Retrieve a list of events scheduled in a specific classroom. This endpoint is useful for managing classroom bookings and ensuring there are no scheduling conflicts.
+
+### HTTP Request
+
+`GET /event/get/classroom/{CLASSROOM_CODE}`
+
+### Headers
+
+- `Authorization: Bearer {YOUR_TOKEN}`
+
+### URL Parameters
+
+| Parameter        | Type   | Description                                      |
+|------------------|--------|--------------------------------------------------|
+| `CLASSROOM_CODE` | String | Unique identifier for the classroom of interest |
+
+### cURL Example
+
+```bash
+curl --location 'http://127.0.0.1:5000/event/get/classroom/{CLASSROOM_CODE}' \
+--header 'Authorization: Bearer {YOUR_TOKEN}'
+```
+
+### Response
+
+The response is a JSON object containing an array of events associated with the specified classroom. Each event includes information such as its start and end times, title, memo, and type, which may be useful for room scheduling and management.
+
+#### Example Success Response
+
+```json
+{
+    "results": [
+        {
+            "code": null,
+            "end": "2023-09-14T10:00:00+00:00",
+            "favori": "",
+            "memo": null,
+            "start": "2023-09-14T08:00:00+00:00",
+            "title": "Matière : PREPARATION AU PROJET PROFESS\nPromotion : M1 HYDROGEOLOGIE, SOL ET ENVIRONNEMENT (HSE)\nSalle : A016 V ( GT )\nType : CM/TD\nMémo : Maison de l'eau",
+            "type": "CM"
+        },
+        ...
+        {
+            "code": "42000c5c",
+            "end": "2024-11-11T11:30:00+00:00",
+            "memo": "réunion projet",
+            "start": "2024-11-11T11:00:00+00:00",
+            "title": "Matière : Test de résa\nEnseignant : XXXXXXX\nSalle : a016 v ( gt )\nPromotion : L3 INFORMATIQUE\nType : Pro\nMémo : réunion projet",
             "type": "Pro"
         }
     ]
