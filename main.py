@@ -14,7 +14,22 @@ import db
 app = Flask(__name__)
 API_BASE_URL = "https://edt-api.univ-avignon.fr/api/"
 
-#https://edt-api.univ-avignon.fr/api/enseignants
+def is_token_valid(token):
+    url = API_BASE_URL + f"events_perso/"
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://edt.univ-avignon.fr/",
+        "token": token,
+        "Origin": "https://edt.univ-avignon.fr",
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        return False
+    return True
+
 def is_promo_avaible(token, start, end, promo_code):
     conn = db.get_db_connection()
     cursor = conn.cursor()
@@ -115,6 +130,20 @@ def get_promotion_api_events(token, promo_code):
         return False
     return response.json()["results"]
 
+def get_personal_api_events(token):
+    url = API_BASE_URL + f"events_perso?autre=false"
+    headers = {
+        "Accept": "application/json, text/plain, */*",
+        "token": token,
+        "Referer": "https://edt.univ-avignon.fr/",
+        "Origin": "https://edt.univ-avignon.fr",
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        return False
+    return response.json()["results"]
+
 def is_teacher_avaible(token, start, end, teacher_code):
     conn = db.get_db_connection()
     cursor = conn.cursor()
@@ -193,6 +222,8 @@ def create_event():
     auth_header = request.headers.get('Authorization')
     if auth_header and auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
+        if not is_token_valid(token):
+            return jsonify({"error": "Authorization token invalid"}), 401
     else:
         return jsonify({"error": "Authorization token is missing or invalid"}), 401
     
@@ -239,6 +270,8 @@ def get_events_by_teacher(teacher_code):
     auth_header = request.headers.get('Authorization')
     if auth_header and auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
+        if not is_token_valid(token):
+            return jsonify({"error": "Authorization token invalid"}), 401
     else:
         return jsonify({"error": "Authorization token is missing or invalid"}), 401
     
@@ -251,6 +284,8 @@ def get_events_by_classroom(classrooms_code):
     auth_header = request.headers.get('Authorization')
     if auth_header and auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
+        if not is_token_valid(token):
+            return jsonify({"error": "Authorization token invalid"}), 401
     else:
         return jsonify({"error": "Authorization token is missing or invalid"}), 401
     
@@ -264,6 +299,8 @@ def get_events_by_promotion(promo_code):
     auth_header = request.headers.get('Authorization')
     if auth_header and auth_header.startswith('Bearer '):
         token = auth_header.split(' ')[1]
+        if not is_token_valid(token):
+            return jsonify({"error": "Authorization token invalid"}), 401
     else:
         return jsonify({"error": "Authorization token is missing or invalid"}), 401
     
@@ -271,6 +308,20 @@ def get_events_by_promotion(promo_code):
     db_events = db.get_events_with_promotion_code(promo_code)
     return jsonify({"results":  get_promotion_api_events(token, promo_code) + db_events})
 
+@app.route('/event/get/personal', methods=['GET'])
+def get_events_personal():
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        if not is_token_valid(token):
+            return jsonify({"error": "Authorization token invalid"}), 401
+    else:
+        return jsonify({"error": "Authorization token is missing or invalid"}), 401
+    
+    db.update_data(token)
+    db_events = db.get_events()
+    return jsonify({"results":  get_personal_api_events(token) + db_events})
+    
 if __name__ == '__main__':
     db.init_db()
     app.run(debug=True)

@@ -10,8 +10,6 @@ from main import API_BASE_URL
 DATABASE_NAME = 'custom_edt.db'
 LAST_UPDATE = "2024-01-01T00:00:00+00:00"
 
- # TODO: make the table promotion and all func needed
-
 def init_db():
     """Create the database and tables if they don't already exist."""
     if not os.path.exists(DATABASE_NAME):
@@ -182,6 +180,43 @@ def get_teacher_from_code(teacher_code):
     conn.close()
     return db_events_list[0]
 
+def get_events():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    query = f'''
+        SELECT 
+            event.code, 
+            event.start, 
+            event.end, 
+            event.type, 
+            event.memo, 
+            event.title, 
+            event.promo_code,
+            teachers.name AS teacher_name,
+            classrooms.name AS classroom_name,
+            academicPrograms.name AS program_name
+        FROM 
+            event
+        JOIN 
+            teachers ON event.teacher_code = teachers.uapvRH
+        JOIN 
+            classrooms ON event.classroom_code = classrooms.code
+        JOIN 
+            academicPrograms ON event.promo_code = academicPrograms.code;
+    '''
+    cursor.execute(query)
+    results = cursor.fetchall()
+    conn.close()
+
+    # Formatting the result
+    events = [
+        {'code': row[0], 'start': row[1], 'end': row[2], 'type': row[3], "memo": row[4],
+         'title': f"Matière : {row[5]}\nEnseignant : {row[7]}\nSalle : {row[8]}\nPromotion : {row[9].upper()}\nType : {row[3]}\nMémo : {row[4]}"} 
+        for row in results
+    ]
+
+    return events
+
 def get_db_events(filter_by, filter_value):
     """
     Fetch events from the database based on a filtering criterion.
@@ -230,7 +265,6 @@ def get_db_events(filter_by, filter_value):
     ]
 
     return events
-
 
 def get_events_with_teacher_code(teacher_code):
     return get_db_events('teacher_code', teacher_code)
