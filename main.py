@@ -8,48 +8,21 @@ import sqlite3
 import os
 import requests
 from dateutil import parser
+from datetime import datetime, timedelta, timezone
+import db
 
 app = Flask(__name__)
-DATABASE_NAME = 'custom_edt.db'
 API_BASE_URL = "https://edt-api.univ-avignon.fr/api/"
 
-# https://edt-api.univ-avignon.fr/api/events_promotion/2-L3IN
-def init_db():
-    """Create the database and tables if they don't already exist."""
-    if not os.path.exists(DATABASE_NAME):
-        conn = sqlite3.connect(DATABASE_NAME)
-        cursor = conn.cursor()
-        # Create the 'event' table
-        cursor.execute('''CREATE TABLE event (
-                          code TEXT PRIMARY KEY,
-                          start TEXT,
-                          end TEXT,
-                          type TEXT,
-                          memo TEXT,
-                          title TEXT,
-                          teacher_code TEXT,
-                          classroom_code TEXT,
-                          promo_code TEXT
-                          )''')
-        conn.commit()
-        conn.close()
-        print("Database and table created.")
-    else:
-        print("Database already exists.")
-        
-def get_db_connection():
-    conn = sqlite3.connect(DATABASE_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
-
+#https://edt-api.univ-avignon.fr/api/enseignants
 def is_promo_avaible(token, start, end, promo_code):
-    conn = get_db_connection()
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT start, end FROM event WHERE promo_code = ?", (promo_code,))
     events = cursor.fetchall()
     conn.close()
     
-    if not is_avaible(events, start, end):
+    if events and not is_avaible(events, start, end):
         return False
     
     url = API_BASE_URL + f"events_promotion/{promo_code}"
@@ -71,13 +44,13 @@ def is_promo_avaible(token, start, end, promo_code):
     return is_avaible(data, start, end)
 
 def is_classroom_avaible(token, start, end, classroom_code):
-    conn = get_db_connection()
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT start, end FROM event WHERE classroom_code = ?", (classroom_code,))
     events = cursor.fetchall()
     conn.close()
     
-    if not is_avaible(events, start, end):
+    if events and not is_avaible(events, start, end):
         return False
     
     url = API_BASE_URL + f"events_salle/{classroom_code}"
@@ -115,17 +88,18 @@ def get_teacher_api_events(token, teacher_code):
     return response.json()["results"]
 
 def is_teacher_avaible(token, start, end, teacher_code):
-    conn = get_db_connection()
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT start, end FROM event WHERE teacher_code = ?", (teacher_code,))
     events = cursor.fetchall()
     conn.close()
-    
-    if not is_avaible(events, start, end):
+    if events and not is_avaible(events, start, end):
         return False
     return is_avaible(get_teacher_api_events(token, teacher_code), start, end)
 
 def is_avaible(events, start, end):
+    if not events:
+        return False
     if(len(events) == 0):
         return True
     for event in events:
@@ -177,11 +151,10 @@ def login():
     """
     is_student = not (uid == None or not uid.startswith("uapv"))
     driver.quit()
-
-    # Check if the name was successfully retrieved
+    db.update_data(token);
     if not name or not token:
         return jsonify(error="Could not retrieve name from session storage"), 500
-    
+
     return jsonify({"name": name, "token": token, "is_student": is_student})
         
 @app.route('/event/create', methods=['POST'])
@@ -198,28 +171,26 @@ def create_event():
     input_data = request.get_json()
     start = input_data.get('start')
     end = input_data.get('end')
-    teacher_code = input_data.get('teacher_code')
-    
+    teacher_code = input_data.get('teacher_code')  
+    print(teacher_code)
+    print(is_teacher_avaible(token, start, end, teacher_code))
     if teacher_code != "" and not is_teacher_avaible(token, start, end, teacher_code):
         return jsonify({"error": "Teacher not avaible"})
 
     classroom_code = input_data.get('classroom_code')
-
-    
     if classroom_code != "" and not is_classroom_avaible(token, start, end, classroom_code):
         return jsonify({"error": "Classroom not avaible"})
     
-    promo_code = input_data.get('promo_code')
-    
+    promo_code = input_data.get('promo_code') 
     if promo_code != "" and not is_promo_avaible(token, start, end, promo_code):
         return jsonify({"error": "Classroom not avaible"})
     
     type = input_data.get('type')
     memo = input_data.get('memo')
-    title = input_data.get('title')
+    title = f"{input_data.get('title')}"
     event_code = os.urandom(4).hex()
 
-    conn = get_db_connection()
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     
     try:
@@ -243,19 +214,12 @@ def get_events_by_teacher(teacher_code):
     else:
         return jsonify({"error": "Authorization token is missing or invalid"}), 401
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM event WHERE teacher_code = ?", (teacher_code,))
-    db_events_list = cursor.fetchall()
-    conn.close()
-    
-    db_events_dicts = [dict(row) for row in db_events_list]
-    
-    api_events = get_teacher_api_events(token, teacher_code)
+    db.update_data(token)
+    db_events = db.get_events_with_teacher_code(teacher_code)
+    print(db_events)
+    return jsonify({"results":  get_teacher_api_events(token, teacher_code) + db_events})
 
-    return jsonify({"results": api_events + db_events_dicts})
-
-    
+ # TODO: get events by classroom
 if __name__ == '__main__':
-    init_db()
+    db.init_db()
     app.run(debug=True)
