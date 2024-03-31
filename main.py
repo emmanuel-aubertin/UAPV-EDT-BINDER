@@ -216,7 +216,6 @@ def get_events_by_teacher(teacher_code):
     
     db.update_data(token)
     db_events = db.get_events_with_teacher_code(teacher_code)
-    print(db_events)
     return jsonify({"results":  get_teacher_api_events(token, teacher_code) + db_events})
 
  # TODO: get events by classroom
