@@ -85,6 +85,8 @@ def update_teachers(token):
     for letter_teachers in results:
         teachers = letter_teachers["names"]
         for teacher in teachers:
+            if teacher["uapvRH"] == "" or not teacher["uapvRH"]:
+                continue
             try:
                 cursor.execute("INSERT INTO teachers (name, code, uapvRH, searchString) VALUES (?, ?, ?, ?)", 
                                (teacher["name"], teacher["code"], teacher["uapvRH"], teacher["searchString"]))
@@ -183,7 +185,7 @@ def get_teacher_from_code(teacher_code):
 def get_events():
     conn = get_db_connection()
     cursor = conn.cursor()
-    query = f'''
+    query = '''
         SELECT 
             event.code, 
             event.start, 
@@ -192,30 +194,39 @@ def get_events():
             event.memo, 
             event.title, 
             event.promo_code,
-            teachers.name AS teacher_name,
-            classrooms.name AS classroom_name,
-            academicPrograms.name AS program_name
+            COALESCE(teachers.name, event.teacher_code) AS teacher_name,
+            COALESCE(classrooms.name, event.classroom_code) AS classroom_name,
+            COALESCE(academicPrograms.name, event.promo_code) AS program_name
         FROM 
             event
-        JOIN 
+        LEFT JOIN 
             teachers ON event.teacher_code = teachers.uapvRH
-        JOIN 
+        LEFT JOIN 
             classrooms ON event.classroom_code = classrooms.code
-        JOIN 
+        LEFT JOIN 
             academicPrograms ON event.promo_code = academicPrograms.code;
     '''
     cursor.execute(query)
     results = cursor.fetchall()
     conn.close()
 
-    # Formatting the result
+    # Formatting the result with conditional addition for each field
     events = [
         {'code': row[0], 'start': row[1], 'end': row[2], 'type': row[3], "memo": row[4],
-         'title': f"Matière : {row[5]}\nEnseignant : {row[7]}\nSalle : {row[8]}\nPromotion : {row[9].upper()}\nType : {row[3]}\nMémo : {row[4]}"} 
+         'title': ''.join([
+             f"Matière : {row[5]}\n" if row[5].strip() != "" else "",
+             f"Enseignant : {row[7]}\n" if row[7].strip() != "" else "",
+             f"Salle : {row[8]}\n" if row[8].strip() != "" else "",
+             f"Promotion : {row[9].upper()}\n" if row[9].strip() != "" else "",
+             f"Type : {row[3]}\n",
+             f"Mémo : {row[4]}"
+         ])} 
         for row in results
     ]
 
     return events
+
+
 
 def get_db_events(filter_by, filter_value):
     """

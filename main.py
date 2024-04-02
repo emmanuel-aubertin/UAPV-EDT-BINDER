@@ -63,7 +63,7 @@ def is_promo_avaible(token, start, end, promo_code):
 def is_classroom_avaible(token, start, end, classroom_code):
     conn = db.get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM classrooms WHERE classroom_code = ?", (classroom_code,))
+    cursor.execute("SELECT * FROM classrooms WHERE code = ?", (classroom_code,))
     classroom = cursor.fetchall()
     
     if not classroom:
@@ -225,8 +225,6 @@ def login():
         
 @app.route('/event/create', methods=['POST'])
 def create_event():
-    if not request.is_json:
-        return jsonify(error="Request must be JSON"), 400
     
     auth_header = request.headers.get('Authorization')
     if auth_header and auth_header.startswith('Bearer '):
@@ -329,6 +327,7 @@ def get_events_personal():
     
     db.update_data(token)
     db_events = db.get_events()
+    print(db_events)
     return jsonify({"results":  get_personal_api_events(token) + db_events})
 
 @app.route('/isDark', methods=['GET'])
