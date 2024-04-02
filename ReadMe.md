@@ -1,7 +1,7 @@
 
-# Get Your EDT-UAPV Token
+# UAPV-EDT-BINDER
 
-Welcome to the EDT-UAPV token retrieval tool! 
+Welcome to the EDT-UAPV binder retrieval tool! 
 ## Prerequisites
 
 Before you start, ensure you have the following prerequisites installed on your system:
