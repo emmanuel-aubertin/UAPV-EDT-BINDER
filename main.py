@@ -14,6 +14,8 @@ import db
 app = Flask(__name__)
 API_BASE_URL = "https://edt-api.univ-avignon.fr/api/"
 
+isDark = True;
+
 def is_token_valid(token):
     url = API_BASE_URL + f"events_perso/"
     headers = {
@@ -61,6 +63,13 @@ def is_promo_avaible(token, start, end, promo_code):
 def is_classroom_avaible(token, start, end, classroom_code):
     conn = db.get_db_connection()
     cursor = conn.cursor()
+    cursor.execute("SELECT * FROM classrooms WHERE classroom_code = ?", (classroom_code,))
+    classroom = cursor.fetchall()
+    
+    if not classroom:
+        conn.close()
+        return True
+    
     cursor.execute("SELECT start, end FROM event WHERE classroom_code = ?", (classroom_code,))
     events = cursor.fetchall()
     conn.close()
@@ -233,15 +242,15 @@ def create_event():
     teacher_code = input_data.get('teacher_code')  
     print(teacher_code)
     print(is_teacher_avaible(token, start, end, teacher_code))
-    if teacher_code != "" and not is_teacher_avaible(token, start, end, teacher_code):
+    if teacher_code and teacher_code != "" and not is_teacher_avaible(token, start, end, teacher_code):
         return jsonify({"error": "Teacher not avaible"})
 
     classroom_code = input_data.get('classroom_code')
-    if classroom_code != "" and not is_classroom_avaible(token, start, end, classroom_code):
+    if classroom_code and classroom_code != "" and not is_classroom_avaible(token, start, end, classroom_code):
         return jsonify({"error": "Classroom not avaible"})
     
     promo_code = input_data.get('promo_code') 
-    if promo_code != "" and not is_promo_avaible(token, start, end, promo_code):
+    if promo_code and promo_code != "" and not is_promo_avaible(token, start, end, promo_code):
         return jsonify({"error": "Classroom not avaible"})
     
     type = input_data.get('type')
@@ -321,7 +330,31 @@ def get_events_personal():
     db.update_data(token)
     db_events = db.get_events()
     return jsonify({"results":  get_personal_api_events(token) + db_events})
-    
+
+@app.route('/isDark', methods=['GET'])
+def isDarkRoute():
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        if not is_token_valid(token):
+            return jsonify({"error": "Authorization token invalid"}), 401
+    else:
+        return jsonify({"error": "Authorization token is missing or invalid"}), 401
+    return jsonify({"darkMode": isDark})
+
+@app.route('/isDark/Toggle', methods=['GET'])
+def setDarkRoute():
+    global isDark
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+        if not is_token_valid(token):
+            return jsonify({"error": "Authorization token invalid"}), 401
+    else:
+        return jsonify({"error": "Authorization token is missing or invalid"}), 401
+    isDark = not isDark
+    return jsonify({"darkMode": isDark})
+
 if __name__ == '__main__':
     db.init_db()
     app.run(debug=True)
